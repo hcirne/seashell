@@ -47,6 +47,15 @@ int main(void) {
             break;
         }
 
+        if (strcmp(args[0], "cd") == 0) {
+            if (args[1] == NULL) {
+                fprintf(stderr, "seashell: cd: missing argument\n");
+            } else if (chdir(args[1]) == -1) {
+                perror("seashell: cd:");
+            }
+            continue;
+        }
+
         pid_t pid = fork();
 
         if (pid < 0) {
