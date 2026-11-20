@@ -1,3 +1,4 @@
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,6 +43,17 @@ int main(void) {
             continue;
         }
 
+        int k = 0;
+        char *outfile = NULL;
+        while (args[k] != NULL) {
+            if (strcmp(args[k], ">") == 0 && args[k + 1] != NULL) {
+                outfile = args[k + 1];
+                args[k] = NULL;
+                break;
+            }
+            k++;
+        }
+
         // Input is "exit"
         if (strcmp(args[0], "exit") == 0) {
             break;
@@ -51,7 +63,7 @@ int main(void) {
             if (args[1] == NULL) {
                 fprintf(stderr, "seashell: cd: missing argument\n");
             } else if (chdir(args[1]) == -1) {
-                perror("seashell: cd:");
+                perror("seashell: cd");
             }
             continue;
         }
@@ -61,6 +73,16 @@ int main(void) {
         if (pid < 0) {
             perror("seashell");
         } else if (pid == 0) {
+            if (outfile != NULL) {
+                int fd = open(outfile, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+                if (fd == -1) {
+                    perror("seashell");
+                    exit(1);
+                }
+                dup2(fd, 1);
+                close(fd);
+            }
+
             execvp(args[0], args);
             perror("seashell");
             exit(1);
@@ -69,6 +91,5 @@ int main(void) {
             waitpid(pid, &status, 0);
         }
     }
-
     return 0;
 }
