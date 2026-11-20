@@ -22,6 +22,7 @@ int main(void) {
             break;
         }
 
+        // Newline loop
         int i = 0;
         while (line[i] != '\0') {
             if (line[i] == '\n') {
@@ -29,6 +30,8 @@ int main(void) {
             }
             i++;
         }
+
+        // Token loop
         char *tok = strtok(line, " ");
         int j = 0;
         while (tok != NULL && j < MAX_ARGS - 1) {
@@ -38,27 +41,32 @@ int main(void) {
         }
         args[j] = NULL;
 
-        // Input is blank
-        if (args[0] == NULL) {
-            continue;
-        }
-
+        // redirect loop
         int k = 0;
         char *outfile = NULL;
-        while (args[k] != NULL) {
-            if (strcmp(args[k], ">") == 0 && args[k + 1] != NULL) {
+        char *infile = NULL;
+        while (k < j) {
+            if (strcmp(args[k], "<") == 0 && args[k + 1] != NULL) {
+                infile = args[k + 1];
+                args[k] = NULL;
+            } else if (strcmp(args[k], ">") == 0 && args[k + 1] != NULL) {
                 outfile = args[k + 1];
                 args[k] = NULL;
-                break;
             }
             k++;
         }
 
-        // Input is "exit"
+        // empty command check
+        if (args[0] == NULL) {
+            continue;
+        }
+
+        // exit check
         if (strcmp(args[0], "exit") == 0) {
             break;
         }
 
+        // cd check
         if (strcmp(args[0], "cd") == 0) {
             if (args[1] == NULL) {
                 fprintf(stderr, "seashell: cd: missing argument\n");
@@ -68,11 +76,21 @@ int main(void) {
             continue;
         }
 
+        // fork block
         pid_t pid = fork();
 
         if (pid < 0) {
             perror("seashell");
-        } else if (pid == 0) {
+        } else if (pid == 0) { // child branch
+            if (infile != NULL) {
+                int fd = open(infile, O_RDONLY);
+                if (fd == -1) {
+                    perror("seashell");
+                    exit(1);
+                }
+                dup2(fd, 0);
+                close(fd);
+            }
             if (outfile != NULL) {
                 int fd = open(outfile, O_WRONLY | O_CREAT | O_TRUNC, 0644);
                 if (fd == -1) {
@@ -86,7 +104,7 @@ int main(void) {
             execvp(args[0], args);
             perror("seashell");
             exit(1);
-        } else {
+        } else { // parent branch
             int status;
             waitpid(pid, &status, 0);
         }
